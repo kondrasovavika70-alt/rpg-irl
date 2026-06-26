@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RPG IRL 🐾 v9 Telegram</title>
+    <title>RPG IRL 🐾 v9 Telegram Fixed</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -44,7 +44,15 @@
         .streak-badge { background: linear-gradient(135deg, #ff6b6b, #ff8e53); color: #fff; padding: 6px 12px; border-radius: 12px; font-weight: bold; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 4px 10px rgba(255,107,107,0.3); }
         .profile-title { font-size: 0.9rem; color: var(--accent-pink); font-weight: 600; background: #3a3238; padding: 6px 12px; border-radius: 12px; display: inline-block; border: 1px solid #5a424b; }
         .profile-bio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; background: #23232a; padding: 12px; border-radius: 12px; border: 1px dashed #4e3e45; font-size: 0.85rem; color: #cbd5e1; }
-        .paw-glow { color: var(--accent-yellow) !important; font-style: normal; display: inline-block; text-shadow: 0 0 8px rgba(255, 241, 118, 0.7); }
+        
+        /* Жёлтый неон для всех лапок */
+        .paw-glow { 
+            color: var(--accent-yellow) !important; 
+            font-style: normal; 
+            display: inline-block; 
+            text-shadow: 0 0 10px rgba(255, 241, 118, 0.9), 0 0 20px rgba(255, 241, 118, 0.4); 
+        }
+        
         .gold-display { color: #ffffff; font-weight: bold; font-size: 1.3rem; background: #4a323a; padding: 8px 16px; border-radius: 25px; border: 1px solid #7a4c5b; white-space: nowrap; }
 
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 25px; }
@@ -71,8 +79,11 @@
         .btn:active { transform: scale(0.96); }
         .btn-quest { background: var(--accent-pink); }
         .btn-shop { background: var(--accent-gold); }
-        .btn-undo { background: #4f4f5a; color: #e0dcd0; padding: 6px 14px; font-size: 0.8rem; border: 1px solid #616170; margin-bottom: 10px; }
+        
+        .action-buttons-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        .btn-undo { background: #4f4f5a; color: #e0dcd0; padding: 6px 14px; font-size: 0.8rem; border: 1px solid #616170; }
         .btn-undo:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-reset { background: #5a3838; color: #ff8a80; padding: 6px 14px; font-size: 0.8rem; border: 1px solid #7a4c4c; }
 
         .history-log { background: #23232a; border: 1px dashed #5a424b; border-radius: 16px; padding: 12px; max-height: 120px; overflow-y: auto; font-size: 0.85rem; }
         .log-item { padding: 6px 0; border-bottom: 1px solid #2d2d37; display: flex; justify-content: space-between; }
@@ -106,6 +117,7 @@
     <h1>🐾 RPG IRL 🐾</h1>
     <div id="sync-status">Загрузка данных из облака...</div>
     
+    <!-- Профиль -->
     <div class="profile-card">
         <div class="profile-info">
             <div class="profile-header-row">
@@ -125,6 +137,7 @@
         </div>
     </div>
 
+    <!-- Статы -->
     <div class="stats-grid">
         <div class="stat-card int">
             <h3>🧠 Интеллект</h3>
@@ -152,65 +165,71 @@
         </div>
     </div>
 
+    <!-- Квесты -->
     <h2 class="section-title">✨ Прокачка (Мои Квесты)</h2>
     <div class="item-list">
         <div class="item-row">
-            <div><strong>Учеба:</strong> 30 мин фокуса (+10 INT, +5 🐾)</div>
+            <div><strong>Учеба:</strong> 30 мин фокуса (+10 INT, +5 <span class="paw-glow">🐾</span>)</div>
             <button class="btn btn-quest" onclick="completeQuest('Учеба', 'int', 10, 5)">Готово</button>
         </div>
         <div class="item-row">
-            <div><strong>Чтение:</strong> 1 глава книги (+5 INT, +3 🐾)</div>
+            <div><strong>Чтение:</strong> 1 глава книги (+5 INT, +3 <span class="paw-glow">🐾</span>)</div>
             <button class="btn btn-quest" onclick="completeQuest('Чтение книги', 'int', 5, 3)">Готово</button>
         </div>
         <div class="item-row">
-            <div><strong>Зал:</strong> Силовая (+25 STR, +15 🐾)</div>
+            <div><strong>Зал:</strong> Силовая (+25 STR, +15 <span class="paw-glow">🐾</span>)</div>
             <button class="btn btn-quest" onclick="completeQuest('Тренировка в зале', 'str', 25, 15)">Готово</button>
         </div>
         <div class="item-row">
-            <div><strong>Выносливость:</strong> Кардио 1ч (+30 END, +20 🐾)</div>
+            <div><strong>Выносливость:</strong> Кардио 1ч (+30 END, +20 <span class="paw-glow">🐾</span>)</div>
             <button class="btn btn-quest" onclick="completeQuest('Кардио тренировка (1ч)', 'end', 30, 20)">Готово</button>
         </div>
         <div class="item-row">
-            <div><strong>Шаги (Малые):</strong> 5,000 шагов (+5 END, +2 🐾)</div>
+            <div><strong>Шаги (Малые):</strong> 5,000 шагов (+5 END, +2 <span class="paw-glow">🐾</span>)</div>
             <button class="btn btn-quest" onclick="completeQuest('5,000 шагов', 'end', 5, 2)">Готово</button>
         </div>
         <div class="item-row">
-            <div><strong>Шаги (Большие):</strong> 10,000 шагов (+10 END, +5 🐾)</div>
+            <div><strong>Шаги (Большие):</strong> 10,000 шагов (+10 END, +5 <span class="paw-glow">🐾</span>)</div>
             <button class="btn btn-quest" onclick="completeQuest('10,000 шагов', 'end', 10, 5)">Готово</button>
         </div>
         <div class="item-row">
-            <div><strong>Сон:</strong> Режимный сон (+10 REG, +5 END, +5 🐾)</div>
+            <div><strong>Сон:</strong> Режимный сон (+10 REG, +5 END, +5 <span class="paw-glow">🐾</span>)</div>
             <button class="btn btn-quest" onclick="completeQuestSleep()">Готово</button>
         </div>
     </div>
 
+    <!-- Магазин -->
     <h2 class="section-title">🎀 Плюшки (Мой Магазин)</h2>
     <div class="item-list">
         <div class="item-row">
-            <div>1 катка в игры (Цена: 25 🐾)</div>
+            <div>1 катка в игры (Цена: 25 <span class="paw-glow">🐾</span>)</div>
             <button class="btn btn-shop" onclick="buyReward('1 катка в игры', 25)">Взять</button>
         </div>
         <div class="item-row">
-            <div>1 серия сериала / YouTube (Цена: 20 🐾)</div>
+            <div>1 серия сериала / YouTube (Цена: 20 <span class="paw-glow">🐾</span>)</div>
             <button class="btn btn-shop" onclick="buyReward('Серия сериала/YouTube', 20)">Взять</button>
         </div>
         <div class="item-row">
-            <div>Вкусняшка вне рациона (Цена: 50 🐾)</div>
+            <div>Вкусняшка вне рациона (Цена: 50 <span class="paw-glow">🐾</span>)</div>
             <button class="btn btn-shop" onclick="buyReward('Вкусняшка', 50)">Взять</button>
         </div>
     </div>
 
+    <!-- Летопись -->
     <h2 class="section-title">📜 Летопись достижений</h2>
-    <div style="margin-top: 5px;">
+    <div class="action-buttons-row">
         <button id="undo-btn" class="btn btn-undo" onclick="undoAction()" disabled>↩ Отменить действие</button>
+        <button class="btn btn-reset" onclick="resetAllProgress()">🗑️ Очистить весь прогресс</button>
     </div>
     <div class="history-log" id="log-container"></div>
 
+    <!-- ЗАЛ СЛАВЫ -->
     <h2 class="section-title">🏆 Зал Славы (24 Обычных + 8 Скрытых)</h2>
     <div class="achievements-container">
         <div class="achievements-grid" id="achievements-root"></div>
     </div>
 
+    <!-- Копилка -->
     <div class="relocation-card">
         <div class="relocation-header">
             <span>📦 Копилка: Переезд</span>
@@ -225,22 +244,14 @@
 </div>
 
 <script>
-    // 1. Настройки Supabase
     const SUPABASE_URL = "https://lrcrvvnudhhjycibghja.supabase.co";
     const SUPABASE_KEY = "sb_publishable_T0QxGbjKDlANMUiKuuNRZw_89Q8fF6v";
     
-    // Переименовали переменную клиента, чтобы избежать конфликтов со скриптом Supabase
-    const sbClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
-    const tg = window.Telegram?.WebApp;
-    if (tg) tg.expand();
+    let sbClient = null;
+    let tg = null;
+    let userId = 0;
 
-    // Получаем ID пользователя из Telegram
-    const userId = tg?.initDataUnsafe?.user?.id || 0;
-    if (tg?.initDataUnsafe?.user?.first_name) {
-        document.getElementById('user-display-name').innerText = tg.initDataUnsafe.user.first_name;
-    }
-
-    let state = {
+    let defaultState = {
         gold: 0, int: { lvl: 0, xp: 0 }, str: { lvl: 0, xp: 0 }, end: { lvl: 0, xp: 0 }, reg: { lvl: 0, xp: 0 }, 
         savings: 0, streak: 0, lastQuestDate: null, history: [], spentGold: 0, recoveredStreakFlag: false,
         statsCounters: { study: 0, read: 0, gym: 0, cardio: 0, steps5k: 0, steps10k: 0, sleep: 0, totalQuests: 0 },
@@ -248,6 +259,7 @@
         dailyFlags: { study:false, read:false, gym:false, cardio:false, steps5k:false, steps10k:false, sleep:false }
     };
 
+    let state = JSON.parse(JSON.stringify(defaultState));
     let undoStack = [];
 
     const NORMAL_ACHIEVEMENTS = [
@@ -277,41 +289,58 @@
         { id: 'cls4', icon: '🌟', title: 'Идеал', desc: 'Выполнить любые 150 квестов', req: { type: 'totalQuests', num: 150 } }
     ];
 
-    // Умный загрузчик с встроенным таймаутом против зависания подключения
+    function safeSetText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = text;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        try {
+            tg = window.Telegram?.WebApp;
+            if (tg) tg.expand();
+            userId = tg?.initDataUnsafe?.user?.id || 0;
+            if (tg?.initDataUnsafe?.user?.first_name) {
+                safeSetText('user-display-name', tg.initDataUnsafe.user.first_name);
+            }
+            if (window.supabase) {
+                sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+        } catch(e) {
+            console.error("Ошибка инициализации окружения:", e);
+        }
+        loadStateFromCloud();
+    });
+
     async function loadStateFromCloud() {
         const syncStatus = document.getElementById('sync-status');
-        
-        // Создаем аварийный прерыватель на 5 секунд
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        let fallback = true;
 
-        try {
-            if (!sbClient || userId === 0) throw new Error("Локальный режим");
-            syncStatus.innerText = "⏳ Синхронизация...";
-
-            const { data, error } = await sbClient.from('user_progress')
-                .select('state')
-                .eq('telegram_id', userId)
-                .single();
-                
-            clearTimeout(timeoutId);
-
-            if (error && error.code !== 'PGRST116') throw error; 
+        if (sbClient && userId !== 0) {
+            if (syncStatus) syncStatus.innerText = "⏳ Синхронизация...";
             
-            if (data && data.state) {
-                state = data.state;
-                syncStatus.innerText = "☁️ Данные синхронизированы с облаком";
-            } else {
-                const local = localStorage.getItem('rpg_victoria_data_v9');
-                if (local) state = JSON.parse(local);
-                syncStatus.innerText = "✨ Создан новый профиль!";
+            const p1 = sbClient.from('user_progress').select('state').eq('telegram_id', userId).single();
+            const p2 = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 4000));
+
+            try {
+                const res = await Promise.race([p1, p2]);
+                if (res && res.data && res.data.state) {
+                    state = res.data.state;
+                    if (syncStatus) syncStatus.innerText = "☁️ Данные синхронизированы с облаком";
+                    fallback = false;
+                }
+            } catch(e) {
+                console.warn("Синхронизация затянулась, переключаемся на локальные данные.");
             }
-        } catch (e) {
-            console.warn("Переход на автономный режим:", e);
-            const local = localStorage.getItem('rpg_victoria_data_v9');
-            if (local) state = JSON.parse(local);
-            syncStatus.innerText = "📴 Автономный режим (сохранение на устройство)";
         }
+
+        if (fallback) {
+            const local = localStorage.getItem('rpg_victoria_data_v9');
+            if (local) {
+                try { state = JSON.parse(local); } catch(e){}
+            }
+            if (syncStatus) syncStatus.innerText = "📴 Автономный режим (сохранение на устройство)";
+        }
+
         calculateAge();
         checkStreakAndPenalties();
         updateUI();
@@ -330,35 +359,39 @@
                 await sbClient.from('user_progress').upsert({ telegram_id: userId, state: state });
             }
         } catch (e) {
-            console.error("Ошибка синхронизации с облаком: ", e);
+            console.error("Ошибка сохранения: ", e);
         }
     }
 
     function calculateAge() {
-        const birthDate = new Date(2005, 6, 1); 
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-        document.getElementById('age-val').innerText = age;
+        try {
+            const birthDate = new Date(2005, 6, 1); 
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+            safeSetText('age-val', age);
+        } catch(e){}
     }
 
     function checkStreakAndPenalties() {
         if (!state.lastQuestDate) return;
-        const today = new Date().setHours(0,0,0,0);
-        const lastDate = new Date(state.lastQuestDate).setHours(0,0,0,0);
-        const diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+        try {
+            const today = new Date().setHours(0,0,0,0);
+            const lastDate = new Date(state.lastQuestDate).setHours(0,0,0,0);
+            const diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
 
-        if (diffDays > 1) {
-            addLog(`💔 Стрик потерян за прогул!`, 'loss', `-15🐾 Штраф`);
-            state.gold = Math.max(0, state.gold - 15);
-            if (state.streak > 0) state.recoveredStreakFlag = true;
-            state.streak = 0;
-            state.dailyFlags = { study:false, read:false, gym:false, cardio:false, steps5k:false, steps10k:false, sleep:false };
-            saveStateToCloud(true);
-        } else if (diffDays === 1) {
-            state.dailyFlags = { study:false, read:false, gym:false, cardio:false, steps5k:false, steps10k:false, sleep:false };
-        }
+            if (diffDays > 1) {
+                addLog(`💔 Стрик потерян за прогул!`, 'loss', `-15 лапок Штраф`);
+                state.gold = Math.max(0, state.gold - 15);
+                if (state.streak > 0) state.recoveredStreakFlag = true;
+                state.streak = 0;
+                state.dailyFlags = { study:false, read:false, gym:false, cardio:false, steps5k:false, steps10k:false, sleep:false };
+                saveStateToCloud(true);
+            } else if (diffDays === 1) {
+                state.dailyFlags = { study:false, read:false, gym:false, cardio:false, steps5k:false, steps10k:false, sleep:false };
+            }
+        } catch(e){}
     }
 
     function handleStreakIncrement() {
@@ -375,24 +408,24 @@
 
     function getStatValue(type) {
         switch(type) {
-            case 'study': return state.statsCounters.study;
-            case 'read': return state.statsCounters.read;
-            case 'intellectSum': return state.statsCounters.study + state.statsCounters.read;
-            case 'intLvl': return state.int.lvl;
-            case 'gym': return state.statsCounters.gym;
-            case 'strLvl': return state.str.lvl;
-            case 'comboCount': return state.achEarned['combo_day_click_tracker'] || 0;
-            case 'sportSum': return state.statsCounters.gym + state.statsCounters.cardio;
-            case 'cardio': return state.statsCounters.cardio;
-            case 'steps5k': return state.statsCounters.steps5k;
-            case 'steps10k': return state.statsCounters.steps10k;
-            case 'endLvl': return state.end.lvl;
-            case 'sleep': return state.statsCounters.sleep;
-            case 'regLvl': return state.reg.lvl;
-            case 'streak': return state.streak;
-            case 'endSum': return state.statsCounters.cardio + state.statsCounters.steps5k + state.statsCounters.steps10k;
-            case 'totalLvl': return state.int.lvl + state.str.lvl + state.end.lvl + state.reg.lvl;
-            case 'totalQuests': return state.statsCounters.totalQuests;
+            case 'study': return state.statsCounters.study || 0;
+            case 'read': return state.statsCounters.read || 0;
+            case 'intellectSum': return (state.statsCounters.study || 0) + (state.statsCounters.read || 0);
+            case 'intLvl': return state.int?.lvl || 0;
+            case 'gym': return state.statsCounters.gym || 0;
+            case 'strLvl': return state.str?.lvl || 0;
+            case 'comboCount': return state.achEarned?.['combo_day_click_tracker'] || 0;
+            case 'sportSum': return (state.statsCounters.gym || 0) + (state.statsCounters.cardio || 0);
+            case 'cardio': return state.statsCounters.cardio || 0;
+            case 'steps5k': return state.statsCounters.steps5k || 0;
+            case 'steps10k': return state.statsCounters.steps10k || 0;
+            case 'endLvl': return state.end?.lvl || 0;
+            case 'sleep': return state.statsCounters.sleep || 0;
+            case 'regLvl': return state.reg?.lvl || 0;
+            case 'streak': return state.streak || 0;
+            case 'endSum': return (state.statsCounters.cardio || 0) + (state.statsCounters.steps5k || 0) + (state.statsCounters.steps10k || 0);
+            case 'totalLvl': return (state.int?.lvl || 0) + (state.str?.lvl || 0) + (state.end?.lvl || 0) + (state.reg?.lvl || 0);
+            case 'totalQuests': return state.statsCounters.totalQuests || 0;
             default: return 0;
         }
     }
@@ -418,14 +451,22 @@
     }
 
     function addLog(text, type, value) {
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        state.history.unshift({ timestamp: timeStr, text: text, type: type, value: value });
-        if (state.history.length > 30) state.history.pop();
+        try {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            const formattedValue = typeof value === 'string' ? value.split('🐾').join('<span class="paw-glow">🐾</span>') : value;
+            const formattedText = text.split('🐾').join('<span class="paw-glow">🐾</span>');
+
+            if(!state.history) state.history = [];
+            state.history.unshift({ timestamp: timeStr, text: formattedText, type: type, value: formattedValue });
+            if (state.history.length > 30) state.history.pop();
+        } catch(e){}
     }
 
     function renderAchievements() {
         const root = document.getElementById('achievements-root');
+        if (!root) return;
         root.innerHTML = '';
 
         NORMAL_ACHIEVEMENTS.forEach(ach => {
@@ -433,11 +474,14 @@
             const isLocked = count === 0;
             const card = document.createElement('div');
             card.className = `achieve-card ${isLocked ? 'locked' : ''}`;
+            
+            const cleanDesc = ach.desc.split('🐾').join('<span class="paw-glow">🐾</span>');
+            
             card.innerHTML = `
                 ${count > 0 ? `<span class="achieve-count">x${count}</span>` : ''}
                 <div class="achieve-icon">${ach.icon}</div>
                 <div class="achieve-title">${ach.title}</div>
-                <div class="achieve-desc">${ach.desc}</div>
+                <div class="achieve-desc">${cleanDesc}</div>
             `;
             root.appendChild(card);
         });
@@ -448,7 +492,7 @@
             { id: 's3', icon: '⚖️', title: 'Абсолютный баланс', desc: 'Прокачать все статы до Ур. 2+' },
             { id: 's4', icon: '👑', title: 'Полный фарш', desc: 'Выполнить все квесты за сутки' },
             { id: 's5', icon: '🛠️', title: 'Трудоголик', desc: 'Выполнить 100 любых заданий' },
-            { id: 's6', icon: '🥂', title: 'Гедонист', desc: 'Потратить в магазине более 200 лапок' },
+            { id: 's6', icon: '🥂', title: 'Гедонист', desc: 'Потратить в магазине более 200 лапок 🐾' },
             { id: 's7', icon: '🦅', title: 'Феникс', desc: 'Восстановить серию активности после нуля' },
             { id: 's8', icon: '🚀', title: 'Крупный куш', desc: 'Собрать 150,000 ₽ на переезд' }
         ];
@@ -458,11 +502,12 @@
             const card = document.createElement('div');
             if (isOpened) {
                 card.className = `achieve-card`;
+                const cleanSecDesc = sec.desc.split('🐾').join('<span class="paw-glow">🐾</span>');
                 card.innerHTML = `
                     <span class="achieve-count" style="background:#ba68c8; color:#fff;">Секрет!</span>
                     <div class="achieve-icon">${sec.icon}</div>
                     <div class="achieve-title" style="color:var(--accent-yellow);">${sec.title}</div>
-                    <div class="achieve-desc">${sec.desc}</div>
+                    <div class="achieve-desc">${cleanSecDesc}</div>
                 `;
             } else {
                 card.className = `achieve-card secret-locked`;
@@ -477,42 +522,51 @@
     }
 
     function updateUI() {
-        document.getElementById('gold-val').innerText = state.gold;
-        document.getElementById('streak-val').innerText = state.streak;
+        safeSetText('gold-val', state.gold);
+        safeSetText('streak-val', state.streak);
         
         let totalLvl = 0;
         ['int', 'str', 'end', 'reg'].forEach(stat => {
-            document.getElementById(`${stat}-lvl`).innerText = state[stat].lvl;
-            document.getElementById(`${stat}-xp`).innerText = state[stat].xp;
-            document.getElementById(`${stat}-bar`).style.width = `${state[stat].xp}%`;
-            totalLvl += state[stat].lvl;
+            if(state[stat]) {
+                safeSetText(`${stat}-lvl`, state[stat].lvl);
+                safeSetText(`${stat}-xp`, state[stat].xp);
+                const fill = document.getElementById(`${stat}-bar`);
+                if(fill) fill.style.width = `${state[stat].xp}%`;
+                totalLvl += state[stat].lvl;
+            }
         });
 
         let title = "Новичок 🐣";
         if (totalLvl >= 15 && totalLvl < 35) title = "Авантюрист 🧭";
         else if (totalLvl >= 35 && totalLvl < 70) title = "Мастер Реальности ⚡";
         else if (totalLvl >= 70) title = "Бессмертная Легенда 🌌";
-        document.getElementById('player-title').innerText = `${title} (Сумма: ${totalLvl})`;
         
-        document.getElementById('undo-btn').disabled = undoStack.length === 0;
+        safeSetText('player-title', `${title} (Сумма: ${totalLvl})`);
+        
+        const uBtn = document.getElementById('undo-btn');
+        if(uBtn) uBtn.disabled = undoStack.length === 0;
 
         const currentSavings = state.savings || 0;
         const savingsPercent = Math.min(((currentSavings / 150000) * 100), 100).toFixed(1);
-        document.getElementById('savings-val').innerText = currentSavings.toLocaleString('ru-RU');
-        document.getElementById('savings-bar').style.width = `${savingsPercent}%`;
-        document.getElementById('savings-percent').innerText = `${savingsPercent}%`;
+        safeSetText('savings-val', currentSavings.toLocaleString('ru-RU'));
+        
+        const sBar = document.getElementById('savings-bar');
+        if(sBar) sBar.style.width = `${savingsPercent}%`;
+        safeSetText('savings-percent', `${savingsPercent}%`);
 
         renderAchievements();
 
         const logContainer = document.getElementById('log-container');
-        logContainer.innerHTML = '';
-        if (state.history.length === 0) {
-            logContainer.innerHTML = '<div style="color:#7d7880; text-align:center;">Твоя летопись пуста... ✨</div>';
-        } else {
-            state.history.forEach(item => {
-                const badgeClass = item.type === 'gain' ? 'log-gain' : 'log-loss';
-                logContainer.innerHTML += `<div class="log-item"><span>[${item.timestamp}] ${item.text}</span><span class="${badgeClass}">${item.value}</span></div>`;
-            });
+        if(logContainer) {
+            logContainer.innerHTML = '';
+            if (!state.history || state.history.length === 0) {
+                logContainer.innerHTML = '<div style="color:#7d7880; text-align:center;">Твоя летопись пуста... ✨</div>';
+            } else {
+                state.history.forEach(item => {
+                    const badgeClass = item.type === 'gain' ? 'log-gain' : 'log-loss';
+                    logContainer.innerHTML += `<div class="log-item"><span>[${item.timestamp}] ${item.text}</span><span class="${badgeClass}">${item.value}</span></div>`;
+                });
+            }
         }
     }
 
@@ -597,8 +651,15 @@
         saveStateToCloud(true);
     }
 
-    // Первичный запуск при открытии приложения
-    loadStateFromCloud();
+    function resetAllProgress() {
+        const check = confirm("⚠️ Ты уверена, что хочешь ПОЛНОСТЬЮ обнулить весь прогресс, уровни, лапки и копилку? Это действие нельзя отменить!");
+        if (check) {
+            undoStack = [];
+            state = JSON.parse(JSON.stringify(defaultState));
+            addLog(`🧹 Прогресс полностью сброшен!`, 'loss', `0`);
+            saveStateToCloud(true);
+        }
+    }
 </script>
 </body>
 </html>
