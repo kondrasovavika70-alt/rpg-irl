@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RPG IRL 🐾 v9 Telegram</title>
-    <!-- Подключаем скрипт Телеграма и библиотеки Supabase -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -107,7 +106,6 @@
     <h1>🐾 RPG IRL 🐾</h1>
     <div id="sync-status">Загрузка данных из облака...</div>
     
-    <!-- Профиль -->
     <div class="profile-card">
         <div class="profile-info">
             <div class="profile-header-row">
@@ -127,7 +125,6 @@
         </div>
     </div>
 
-    <!-- Статы -->
     <div class="stats-grid">
         <div class="stat-card int">
             <h3>🧠 Интеллект</h3>
@@ -155,7 +152,6 @@
         </div>
     </div>
 
-    <!-- Квесты -->
     <h2 class="section-title">✨ Прокачка (Мои Квесты)</h2>
     <div class="item-list">
         <div class="item-row">
@@ -188,7 +184,6 @@
         </div>
     </div>
 
-    <!-- Магазин -->
     <h2 class="section-title">🎀 Плюшки (Мой Магазин)</h2>
     <div class="item-list">
         <div class="item-row">
@@ -205,20 +200,17 @@
         </div>
     </div>
 
-    <!-- Летопись -->
     <h2 class="section-title">📜 Летопись достижений</h2>
     <div style="margin-top: 5px;">
         <button id="undo-btn" class="btn btn-undo" onclick="undoAction()" disabled>↩ Отменить действие</button>
     </div>
     <div class="history-log" id="log-container"></div>
 
-    <!-- ЗАЛ СЛАВЫ -->
     <h2 class="section-title">🏆 Зал Славы (24 Обычных + 8 Скрытых)</h2>
     <div class="achievements-container">
         <div class="achievements-grid" id="achievements-root"></div>
     </div>
 
-    <!-- Копилка -->
     <div class="relocation-card">
         <div class="relocation-header">
             <span>📦 Копилка: Переезд</span>
@@ -233,15 +225,16 @@
 </div>
 
 <script>
-    // Настройки Supabase (ЗАМЕНИ НА СВОИ)
-    const SUPABASE_URL = "https://lrcrvvnudhhjycibghja.supabase.co/rest/v1/";
+    // 1. Настройки Supabase
+    const SUPABASE_URL = "https://lrcrvvnudhhjycibghja.supabase.co";
     const SUPABASE_KEY = "sb_publishable_T0QxGbjKDlANMUiKuuNRZw_89Q8fF6v";
     
-    const supabase = document.getElementById('sync-status') ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+    // Переименовали переменную клиента, чтобы избежать конфликтов со скриптом Supabase
+    const sbClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
     const tg = window.Telegram?.WebApp;
     if (tg) tg.expand();
 
-    // Получаем ID пользователя из Telegram, либо ставим дефолтный 0 для тестов в браузере
+    // Получаем ID пользователя из Telegram
     const userId = tg?.initDataUnsafe?.user?.id || 0;
     if (tg?.initDataUnsafe?.user?.first_name) {
         document.getElementById('user-display-name').innerText = tg.initDataUnsafe.user.first_name;
@@ -265,7 +258,7 @@
         { id: 'str1', icon: '🏋️‍♀️', title: 'Тяжелый металл', desc: 'Сделать 15 тренировок в зале', req: { type: 'gym', num: 15 } },
         { id: 'str2', icon: '🦾', title: 'Титановый стержень', desc: 'Апнуть 5 уровень Силы', req: { type: 'strLvl', num: 5 } },
         { id: 'str3', icon: '⚡', title: 'Комбо-Мастер', desc: 'Провести 10 "Комбо-дней" (Зал + Кардио)', req: { type: 'comboCount', num: 10 } },
-        { id: 'str4', icon: '🔥', title: 'Спорт-Режим', desc: '30 тренировок (Зал или Кардио)', req: { type: 'sportSum', num: 30 } },
+        { id: 'str4', icon: '🔥', title: 'Sport-Режим', desc: '30 тренировок (Зал или Кардио)', req: { type: 'sportSum', num: 30 } },
         { id: 'end1', icon: '🏃‍♀️', title: 'Двухжильная', desc: 'Выполнить 20 кардио-сессий', req: { type: 'cardio', num: 20 } },
         { id: 'end2', icon: '👣', title: 'Пешеход', desc: 'Закрыть 5,000 шагов 25 раз', req: { type: 'steps5k', num: 25 } },
         { id: 'end3', icon: '🗺️', title: 'Марафонец', desc: 'Закрыть 10,000 шагов 30 раз', req: { type: 'steps10k', num: 30 } },
@@ -284,27 +277,40 @@
         { id: 'cls4', icon: '🌟', title: 'Идеал', desc: 'Выполнить любые 150 квестов', req: { type: 'totalQuests', num: 150 } }
     ];
 
+    // Умный загрузчик с встроенным таймаутом против зависания подключения
     async function loadStateFromCloud() {
+        const syncStatus = document.getElementById('sync-status');
+        
+        // Создаем аварийный прерыватель на 5 секунд
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
         try {
-            if (!supabase || userId === 0) throw new Error("Локальный режим");
-            const { data, error } = await supabase.from('user_progress').select('state').eq('telegram_id', userId).single();
+            if (!sbClient || userId === 0) throw new Error("Локальный режим");
+            syncStatus.innerText = "⏳ Синхронизация...";
+
+            const { data, error } = await sbClient.from('user_progress')
+                .select('state')
+                .eq('telegram_id', userId)
+                .single();
+                
+            clearTimeout(timeoutId);
+
             if (error && error.code !== 'PGRST116') throw error; 
             
             if (data && data.state) {
                 state = data.state;
-                document.getElementById('sync-status').innerText = "☁️ Данные синхронизированы с облаком";
+                syncStatus.innerText = "☁️ Данные синхронизированы с облаком";
             } else {
-                // Если в облаке нет, ищем в локалке старого браузера
                 const local = localStorage.getItem('rpg_victoria_data_v9');
                 if (local) state = JSON.parse(local);
-                document.getElementById('sync-status').innerText = "✨ Создан новый облачный профиль!";
-                await saveStateToCloud();
+                syncStatus.innerText = "✨ Создан новый профиль!";
             }
         } catch (e) {
-            console.log(e);
+            console.warn("Переход на автономный режим:", e);
             const local = localStorage.getItem('rpg_victoria_data_v9');
             if (local) state = JSON.parse(local);
-            document.getElementById('sync-status').innerText = "📴 Автономный режим (сохранение на устройство)";
+            syncStatus.innerText = "📴 Автономный режим (сохранение на устройство)";
         }
         calculateAge();
         checkStreakAndPenalties();
@@ -320,8 +326,8 @@
         updateUI();
 
         try {
-            if (supabase && userId !== 0) {
-                await supabase.from('user_progress').upsert({ telegram_id: userId, state: state });
+            if (sbClient && userId !== 0) {
+                await sbClient.from('user_progress').upsert({ telegram_id: userId, state: state });
             }
         } catch (e) {
             console.error("Ошибка синхронизации с облаком: ", e);
@@ -348,6 +354,7 @@
             state.gold = Math.max(0, state.gold - 15);
             if (state.streak > 0) state.recoveredStreakFlag = true;
             state.streak = 0;
+            state.dailyFlags = { study:false, read:false, gym:false, cardio:false, steps5k:false, steps10k:false, sleep:false };
             saveStateToCloud(true);
         } else if (diffDays === 1) {
             state.dailyFlags = { study:false, read:false, gym:false, cardio:false, steps5k:false, steps10k:false, sleep:false };
@@ -541,43 +548,56 @@
 
     function completeQuestSleep() {
         handleStreakIncrement();
-        state.gold += 5; state.reg.xp += 10; state.end.xp += 5;
-        state.statsCounters.totalQuests += 1; state.statsCounters.sleep += 1; state.dailyFlags.sleep = true;
+        state.gold += 5; 
+        state.reg.xp += 10; 
+        state.end.xp += 5;
+        state.statsCounters.totalQuests += 1; 
+        state.statsCounters.sleep += 1;
+        state.dailyFlags.sleep = true;
 
-        addLog(`Выполнен квест "Сон"`, 'gain', `+10 REG / +5 END`);
-        if (state.reg.xp >= 100) { state.reg.lvl += 1; state.reg.xp %= 100; }
-        if (state.end.xp >= 100) { state.end.lvl += 1; state.end.xp %= 100; }
+        addLog(`Выполнен квест "Сон"`, 'gain', `+10 REG, +5 END (+5🐾)`);
+
+        if (state.reg.xp >= 100) {
+            state.reg.lvl += Math.floor(state.reg.xp / 100);
+            state.reg.xp = state.reg.xp % 100;
+            addLog(`🎉 АП НАВЫКА: [РЕЖИМ] Ур. ${state.reg.lvl}!`, 'gain', `✨`);
+        }
+        if (state.end.xp >= 100) {
+            state.end.lvl += Math.floor(state.end.xp / 100);
+            state.end.xp = state.end.xp % 100;
+            addLog(`🎉 АП НАВЫКА: [ВЫНОСЛИВОСТЬ] Ур. ${state.end.lvl}!`, 'gain', `✨`);
+        }
         checkAllAchievements();
         saveStateToCloud();
     }
 
     function buyReward(rewardName, cost) {
-        if (state.gold >= cost) {
-            state.gold -= cost; state.spentGold += cost;
-            addLog(`🎀 Награда: "${rewardName}"`, 'loss', `-${cost}🐾`);
-            checkAllAchievements();
-            saveStateToCloud();
-        } else {
-            alert("❌ Недостаточно лапок! 🐾");
+        if (state.gold < cost) {
+            alert("Недостаточно лапок 🐾!");
+            return;
         }
+        state.gold -= cost;
+        state.spentGold += cost;
+        addLog(`Куплено поощрение "${rewardName}"`, 'loss', `-${cost}🐾`);
+        checkAllAchievements();
+        saveStateToCloud();
     }
 
     function addSavings() {
-        if (state.savings >= 150000) return;
-        state.savings += 1000;
-        addLog(`💰 Пополнение копилки`, 'gain', `+1 000 ₽`);
+        state.savings = (state.savings || 0) + 1000;
+        addLog(`Копилка пополнена!`, 'gain', `+1 000 ₽`);
         checkAllAchievements();
         saveStateToCloud();
     }
 
     function undoAction() {
-        if (undoStack.length > 0) {
-            state = undoStack.pop(); 
-            saveStateToCloud(true); 
-        }
+        if (undoStack.length === 0) return;
+        state = undoStack.pop();
+        addLog(`Действие отменено ↩`, 'loss', `Назад`);
+        saveStateToCloud(true);
     }
 
-    // Старт загрузки
+    // Первичный запуск при открытии приложения
     loadStateFromCloud();
 </script>
 </body>
