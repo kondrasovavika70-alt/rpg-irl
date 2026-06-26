@@ -45,7 +45,7 @@
         .profile-title { font-size: 0.9rem; color: var(--accent-pink); font-weight: 600; background: #3a3238; padding: 6px 12px; border-radius: 12px; display: inline-block; border: 1px solid #5a424b; }
         .profile-bio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; background: #23232a; padding: 12px; border-radius: 12px; border: 1px dashed #4e3e45; font-size: 0.85rem; color: #cbd5e1; }
         
-        /* Та самая неоновая жёлтая подсветка для ВСЕХ лапок */
+        /* Жёлтый неон для всех лапок */
         .paw-glow { 
             color: var(--accent-yellow) !important; 
             font-style: normal; 
@@ -114,6 +114,7 @@
     <h1>🐾 RPG IRL 🐾</h1>
     <div id="sync-status">Загрузка данных из облака...</div>
     
+    <!-- Профиль -->
     <div class="profile-card">
         <div class="profile-info">
             <div class="profile-header-row">
@@ -133,6 +134,7 @@
         </div>
     </div>
 
+    <!-- Статы -->
     <div class="stats-grid">
         <div class="stat-card int">
             <h3>🧠 Интеллект</h3>
@@ -160,6 +162,7 @@
         </div>
     </div>
 
+    <!-- Квесты -->
     <h2 class="section-title">✨ Прокачка (Мои Квесты)</h2>
     <div class="item-list">
         <div class="item-row">
@@ -192,6 +195,7 @@
         </div>
     </div>
 
+    <!-- Магазин -->
     <h2 class="section-title">🎀 Плюшки (Мой Магазин)</h2>
     <div class="item-list">
         <div class="item-row">
@@ -208,17 +212,20 @@
         </div>
     </div>
 
+    <!-- Летопись -->
     <h2 class="section-title">📜 Летопись достижений</h2>
     <div style="margin-top: 5px;">
         <button id="undo-btn" class="btn btn-undo" onclick="undoAction()" disabled>↩ Отменить действие</button>
     </div>
     <div class="history-log" id="log-container"></div>
 
+    <!-- ЗАЛ СЛАВЫ -->
     <h2 class="section-title">🏆 Зал Славы (24 Обычных + 8 Скрытых)</h2>
     <div class="achievements-container">
         <div class="achievements-grid" id="achievements-root"></div>
     </div>
 
+    <!-- Копилка -->
     <div class="relocation-card">
         <div class="relocation-header">
             <span>📦 Копилка: Переезд</span>
@@ -236,14 +243,9 @@
     const SUPABASE_URL = "https://lrcrvvnudhhjycibghja.supabase.co";
     const SUPABASE_KEY = "sb_publishable_T0QxGbjKDlANMUiKuuNRZw_89Q8fF6v";
     
-    const sbClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
-    const tg = window.Telegram?.WebApp;
-    if (tg) tg.expand();
-
-    const userId = tg?.initDataUnsafe?.user?.id || 0;
-    if (tg?.initDataUnsafe?.user?.first_name) {
-        document.getElementById('user-display-name').innerText = tg.initDataUnsafe.user.first_name;
-    }
+    let sbClient = null;
+    let tg = null;
+    let userId = 0;
 
     let state = {
         gold: 0, int: { lvl: 0, xp: 0 }, str: { lvl: 0, xp: 0 }, end: { lvl: 0, xp: 0 }, reg: { lvl: 0, xp: 0 }, 
@@ -282,38 +284,59 @@
         { id: 'cls4', icon: '🌟', title: 'Идеал', desc: 'Выполнить любые 150 квестов', req: { type: 'totalQuests', num: 150 } }
     ];
 
+    // Безопасное обновление текста элементов интерфейса
+    function safeSetText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = text;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        try {
+            tg = window.Telegram?.WebApp;
+            if (tg) tg.expand();
+            userId = tg?.initDataUnsafe?.user?.id || 0;
+            if (tg?.initDataUnsafe?.user?.first_name) {
+                safeSetText('user-display-name', tg.initDataUnsafe.user.first_name);
+            }
+            if (window.supabase) {
+                sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+        } catch(e) {
+            console.error("Ошибка инициализации окружения:", e);
+        }
+        loadStateFromCloud();
+    });
+
     async function loadStateFromCloud() {
         const syncStatus = document.getElementById('sync-status');
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        let fallback = true;
 
-        try {
-            if (!sbClient || userId === 0) throw new Error("Локальный режим");
-            syncStatus.innerText = "⏳ Синхронизация...";
-
-            const { data, error } = await sbClient.from('user_progress')
-                .select('state')
-                .eq('telegram_id', userId)
-                .single();
-                
-            clearTimeout(timeoutId);
-
-            if (error && error.code !== 'PGRST116') throw error; 
+        if (sbClient && userId !== 0) {
+            if (syncStatus) syncStatus.innerText = "⏳ Синхронизация...";
             
-            if (data && data.state) {
-                state = data.state;
-                syncStatus.innerText = "☁️ Данные синхронизированы с облаком";
-            } else {
-                const local = localStorage.getItem('rpg_victoria_data_v9');
-                if (local) state = JSON.parse(local);
-                syncStatus.innerText = "✨ Создан новый профиль!";
+            const p1 = sbClient.from('user_progress').select('state').eq('telegram_id', userId).single();
+            const p2 = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 4000));
+
+            try {
+                const res = await Promise.race([p1, p2]);
+                if (res && res.data && res.data.state) {
+                    state = res.data.state;
+                    if (syncStatus) syncStatus.innerText = "☁️ Данные синхронизированы с облаком";
+                    fallback = false;
+                }
+            } catch(e) {
+                console.warn("Синхронизация затянулась, переключаемся на локальные данные.");
             }
-        } catch (e) {
-            console.warn("Переход на автономный режим:", e);
-            const local = localStorage.getItem('rpg_victoria_data_v9');
-            if (local) state = JSON.parse(local);
-            syncStatus.innerText = "📴 Автономный режим (сохранение на устройство)";
         }
+
+        if (fallback) {
+            const local = localStorage.getItem('rpg_victoria_data_v9');
+            if (local) {
+                try { state = JSON.parse(local); } catch(e){}
+            }
+            if (syncStatus) syncStatus.innerText = "📴 Автономный режим (сохранение на устройство)";
+        }
+
         calculateAge();
         checkStreakAndPenalties();
         updateUI();
@@ -332,35 +355,39 @@
                 await sbClient.from('user_progress').upsert({ telegram_id: userId, state: state });
             }
         } catch (e) {
-            console.error("Ошибка синхронизации с облаком: ", e);
+            console.error("Ошибка сохранения: ", e);
         }
     }
 
     function calculateAge() {
-        const birthDate = new Date(2005, 6, 1); 
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-        document.getElementById('age-val').innerText = age;
+        try {
+            const birthDate = new Date(2005, 6, 1); 
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+            safeSetText('age-val', age);
+        } catch(e){}
     }
 
     function checkStreakAndPenalties() {
         if (!state.lastQuestDate) return;
-        const today = new Date().setHours(0,0,0,0);
-        const lastDate = new Date(state.lastQuestDate).setHours(0,0,0,0);
-        const diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+        try {
+            const today = new Date().setHours(0,0,0,0);
+            const lastDate = new Date(state.lastQuestDate).setHours(0,0,0,0);
+            const diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
 
-        if (diffDays > 1) {
-            addLog(`💔 Стрик потерян за прогул!`, 'loss', `-15 лапок Штраф`);
-            state.gold = Math.max(0, state.gold - 15);
-            if (state.streak > 0) state.recoveredStreakFlag = true;
-            state.streak = 0;
-            state.dailyFlags = { study:false, read:false, gym:false, cardio:false, steps5k:false, steps10k:false, sleep:false };
-            saveStateToCloud(true);
-        } else if (diffDays === 1) {
-            state.dailyFlags = { study:false, read:false, gym:false, cardio:false, steps5k:false, steps10k:false, sleep:false };
-        }
+            if (diffDays > 1) {
+                addLog(`💔 Стрик потерян за прогул!`, 'loss', `-15 лапок Штраф`);
+                state.gold = Math.max(0, state.gold - 15);
+                if (state.streak > 0) state.recoveredStreakFlag = true;
+                state.streak = 0;
+                state.dailyFlags = { study:false, read:false, gym:false, cardio:false, steps5k:false, steps10k:false, sleep:false };
+                saveStateToCloud(true);
+            } else if (diffDays === 1) {
+                state.dailyFlags = { study:false, read:false, gym:false, cardio:false, steps5k:false, steps10k:false, sleep:false };
+            }
+        } catch(e){}
     }
 
     function handleStreakIncrement() {
@@ -377,24 +404,24 @@
 
     function getStatValue(type) {
         switch(type) {
-            case 'study': return state.statsCounters.study;
-            case 'read': return state.statsCounters.read;
-            case 'intellectSum': return state.statsCounters.study + state.statsCounters.read;
-            case 'intLvl': return state.int.lvl;
-            case 'gym': return state.statsCounters.gym;
-            case 'strLvl': return state.str.lvl;
-            case 'comboCount': return state.achEarned['combo_day_click_tracker'] || 0;
-            case 'sportSum': return state.statsCounters.gym + state.statsCounters.cardio;
-            case 'cardio': return state.statsCounters.cardio;
-            case 'steps5k': return state.statsCounters.steps5k;
-            case 'steps10k': return state.statsCounters.steps10k;
-            case 'endLvl': return state.end.lvl;
-            case 'sleep': return state.statsCounters.sleep;
-            case 'regLvl': return state.reg.lvl;
-            case 'streak': return state.streak;
-            case 'endSum': return state.statsCounters.cardio + state.statsCounters.steps5k + state.statsCounters.steps10k;
-            case 'totalLvl': return state.int.lvl + state.str.lvl + state.end.lvl + state.reg.lvl;
-            case 'totalQuests': return state.statsCounters.totalQuests;
+            case 'study': return state.statsCounters.study || 0;
+            case 'read': return state.statsCounters.read || 0;
+            case 'intellectSum': return (state.statsCounters.study || 0) + (state.statsCounters.read || 0);
+            case 'intLvl': return state.int?.lvl || 0;
+            case 'gym': return state.statsCounters.gym || 0;
+            case 'strLvl': return state.str?.lvl || 0;
+            case 'comboCount': return state.achEarned?.['combo_day_click_tracker'] || 0;
+            case 'sportSum': return (state.statsCounters.gym || 0) + (state.statsCounters.cardio || 0);
+            case 'cardio': return state.statsCounters.cardio || 0;
+            case 'steps5k': return state.statsCounters.steps5k || 0;
+            case 'steps10k': return state.statsCounters.steps10k || 0;
+            case 'endLvl': return state.end?.lvl || 0;
+            case 'sleep': return state.statsCounters.sleep || 0;
+            case 'regLvl': return state.reg?.lvl || 0;
+            case 'streak': return state.streak || 0;
+            case 'endSum': return (state.statsCounters.cardio || 0) + (state.statsCounters.steps5k || 0) + (state.statsCounters.steps10k || 0);
+            case 'totalLvl': return (state.int?.lvl || 0) + (state.str?.lvl || 0) + (state.end?.lvl || 0) + (state.reg?.lvl || 0);
+            case 'totalQuests': return state.statsCounters.totalQuests || 0;
             default: return 0;
         }
     }
@@ -412,4 +439,213 @@
 
         if (!state.secrets.s1 && state.gold >= 300) { state.secrets.s1 = true; addLog(`🔮 Секрет: [Богачка]!`, 'gain', `⭐`); }
         if (!state.secrets.s2 && state.savings >= 30000) { state.secrets.s2 = true; addLog(`🔮 Секрет: [Инвестор]!`, 'gain', `⭐`); }
-        if (!state
+        if (!state.secrets.s3 && state.int.lvl >= 2 && state.str.lvl >= 2 && state.end.lvl >= 2 && state.reg.lvl >= 2) { state.secrets.s3 = true; addLog(`🔮 Секрет: [Абсолютный баланс]!`, 'gain', `⭐`); }
+        if (!state.secrets.s4 && state.dailyFlags.study && state.dailyFlags.read && state.dailyFlags.gym && state.dailyFlags.cardio && state.dailyFlags.steps5k && state.dailyFlags.steps10k && state.dailyFlags.sleep) { state.secrets.s4 = true; addLog(`🔮 Секрет: [Полный фарш]!`, 'gain', `⭐`); }
+        if (!state.secrets.s5 && state.statsCounters.totalQuests >= 100) { state.secrets.s5 = true; addLog(`🔮 Секрет: [Трудоголик]!`, 'gain', `⭐`); }
+        if (!state.secrets.s6 && state.spentGold >= 200) { state.secrets.s6 = true; addLog(`🔮 Секрет: [Гедонист]!`, 'gain', `⭐`); }
+        if (!state.secrets.s8 && state.savings >= 150000) { state.secrets.s8 = true; addLog(`🔮 Секрет: [Крупный куш]!`, 'gain', `⭐`); }
+    }
+
+    function addLog(text, type, value) {
+        try {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            const formattedValue = typeof value === 'string' ? value.split('🐾').join('<span class="paw-glow">🐾</span>') : value;
+            const formattedText = text.split('🐾').join('<span class="paw-glow">🐾</span>');
+
+            if(!state.history) state.history = [];
+            state.history.unshift({ timestamp: timeStr, text: formattedText, type: type, value: formattedValue });
+            if (state.history.length > 30) state.history.pop();
+        } catch(e){}
+    }
+
+    function renderAchievements() {
+        const root = document.getElementById('achievements-root');
+        if (!root) return;
+        root.innerHTML = '';
+
+        NORMAL_ACHIEVEMENTS.forEach(ach => {
+            const count = state.achEarned[ach.id] || 0;
+            const isLocked = count === 0;
+            const card = document.createElement('div');
+            card.className = `achieve-card ${isLocked ? 'locked' : ''}`;
+            
+            const cleanDesc = ach.desc.split('🐾').join('<span class="paw-glow">🐾</span>');
+            
+            card.innerHTML = `
+                ${count > 0 ? `<span class="achieve-count">x${count}</span>` : ''}
+                <div class="achieve-icon">${ach.icon}</div>
+                <div class="achieve-title">${ach.title}</div>
+                <div class="achieve-desc">${cleanDesc}</div>
+            `;
+            root.appendChild(card);
+        });
+
+        const secretConfig = [
+            { id: 's1', icon: '💰', title: 'Богачка', desc: 'Накопить одновременно 300 лапок 🐾' },
+            { id: 's2', icon: '📈', title: 'Инвестор', desc: 'Внести в капитал переезда первые 30,000 ₽' },
+            { id: 's3', icon: '⚖️', title: 'Абсолютный баланс', desc: 'Прокачать все статы до Ур. 2+' },
+            { id: 's4', icon: '👑', title: 'Полный фарш', desc: 'Выполнить все квесты за сутки' },
+            { id: 's5', icon: '🛠️', title: 'Трудоголик', desc: 'Выполнить 100 любых заданий' },
+            { id: 's6', icon: '🥂', title: 'Гедонист', desc: 'Потратить в магазине более 200 лапок 🐾' },
+            { id: 's7', icon: '🦅', title: 'Феникс', desc: 'Восстановить серию активности после нуля' },
+            { id: 's8', icon: '🚀', title: 'Крупный куш', desc: 'Собрать 150,000 ₽ на переезд' }
+        ];
+
+        secretConfig.forEach(sec => {
+            const isOpened = state.secrets[sec.id];
+            const card = document.createElement('div');
+            if (isOpened) {
+                card.className = `achieve-card`;
+                const cleanSecDesc = sec.desc.split('🐾').join('<span class="paw-glow">🐾</span>');
+                card.innerHTML = `
+                    <span class="achieve-count" style="background:#ba68c8; color:#fff;">Секрет!</span>
+                    <div class="achieve-icon">${sec.icon}</div>
+                    <div class="achieve-title" style="color:var(--accent-yellow);">${sec.title}</div>
+                    <div class="achieve-desc">${cleanSecDesc}</div>
+                `;
+            } else {
+                card.className = `achieve-card secret-locked`;
+                card.innerHTML = `
+                    <div class="achieve-icon">🔒</div>
+                    <div class="achieve-title">???</div>
+                    <div class="achieve-desc">Скрытая ачивка</div>
+                `;
+            }
+            root.appendChild(card);
+        });
+    }
+
+    function updateUI() {
+        safeSetText('gold-val', state.gold);
+        safeSetText('streak-val', state.streak);
+        
+        let totalLvl = 0;
+        ['int', 'str', 'end', 'reg'].forEach(stat => {
+            if(state[stat]) {
+                safeSetText(`${stat}-lvl`, state[stat].lvl);
+                safeSetText(`${stat}-xp`, state[stat].xp);
+                const fill = document.getElementById(`${stat}-bar`);
+                if(fill) fill.style.width = `${state[stat].xp}%`;
+                totalLvl += state[stat].lvl;
+            }
+        });
+
+        let title = "Новичок 🐣";
+        if (totalLvl >= 15 && totalLvl < 35) title = "Авантюрист 🧭";
+        else if (totalLvl >= 35 && totalLvl < 70) title = "Мастер Реальности ⚡";
+        else if (totalLvl >= 70) title = "Бессмертная Легенда 🌌";
+        
+        safeSetText('player-title', `${title} (Сумма: ${totalLvl})`);
+        
+        const uBtn = document.getElementById('undo-btn');
+        if(uBtn) uBtn.disabled = undoStack.length === 0;
+
+        const currentSavings = state.savings || 0;
+        const savingsPercent = Math.min(((currentSavings / 150000) * 100), 100).toFixed(1);
+        safeSetText('savings-val', currentSavings.toLocaleString('ru-RU'));
+        
+        const sBar = document.getElementById('savings-bar');
+        if(sBar) sBar.style.width = `${savingsPercent}%`;
+        safeSetText('savings-percent', `${savingsPercent}%`);
+
+        renderAchievements();
+
+        const logContainer = document.getElementById('log-container');
+        if(logContainer) {
+            logContainer.innerHTML = '';
+            if (!state.history || state.history.length === 0) {
+                logContainer.innerHTML = '<div style="color:#7d7880; text-align:center;">Твоя летопись пуста... ✨</div>';
+            } else {
+                state.history.forEach(item => {
+                    const badgeClass = item.type === 'gain' ? 'log-gain' : 'log-loss';
+                    logContainer.innerHTML += `<div class="log-item"><span>[${item.timestamp}] ${item.text}</span><span class="${badgeClass}">${item.value}</span></div>`;
+                });
+            }
+        }
+    }
+
+    function completeQuest(questName, stat, xpGained, goldGained) {
+        handleStreakIncrement();
+        state.gold += goldGained;
+        state[stat].xp += xpGained;
+        
+        state.statsCounters.totalQuests += 1;
+        if (questName === 'Учеба') { state.statsCounters.study += 1; state.dailyFlags.study = true; }
+        if (questName === 'Чтение книги') { state.statsCounters.read += 1; state.dailyFlags.read = true; }
+        if (questName === 'Тренировка в зале') { state.statsCounters.gym += 1; state.dailyFlags.gym = true; }
+        if (questName === 'Кардио тренировка (1ч)') { state.statsCounters.cardio += 1; state.dailyFlags.cardio = true; }
+        if (questName === '5,000 шагов') { state.statsCounters.steps5k += 1; state.dailyFlags.steps5k = true; }
+        if (questName === '10,000 шагов') { state.statsCounters.steps10k += 1; state.dailyFlags.steps10k = true; }
+
+        if (state.dailyFlags.gym && state.dailyFlags.cardio) {
+            state.achEarned['combo_day_click_tracker'] = (state.achEarned['combo_day_click_tracker'] || 0) + 1;
+            state.dailyFlags.gym = false; state.dailyFlags.cardio = false; 
+            addLog(`⚡ Комбо-День! (Зал + Кардио)`, 'gain', `🔥`);
+        }
+
+        addLog(`Выполнен квест "${questName}"`, 'gain', `+${xpGained}XP (+${goldGained}🐾)`);
+
+        if (state[stat].xp >= 100) {
+            state[stat].lvl += Math.floor(state[stat].xp / 100);
+            state[stat].xp = state[stat].xp % 100;
+            addLog(`🎉 АП НАВЫКА: [${stat.toUpperCase()}] Ур. ${state[stat].lvl}!`, 'gain', `✨`);
+        }
+        checkAllAchievements();
+        saveStateToCloud();
+    }
+
+    function completeQuestSleep() {
+        handleStreakIncrement();
+        state.gold += 5; 
+        state.reg.xp += 10; 
+        state.end.xp += 5;
+        state.statsCounters.totalQuests += 1; 
+        state.statsCounters.sleep += 1;
+        state.dailyFlags.sleep = true;
+
+        addLog(`Выполнен квест "Сон"`, 'gain', `+10 REG, +5 END (+5🐾)`);
+
+        if (state.reg.xp >= 100) {
+            state.reg.lvl += Math.floor(state.reg.xp / 100);
+            state.reg.xp = state.reg.xp % 100;
+            addLog(`🎉 АП НАВЫКА: [РЕЖИМ] Ур. ${state.reg.lvl}!`, 'gain', `✨`);
+        }
+        if (state.end.xp >= 100) {
+            state.end.lvl += Math.floor(state.end.xp / 100);
+            state.end.xp = state.end.xp % 100;
+            addLog(`🎉 АП НАВЫКА: [ВЫНОСЛИВОСТЬ] Ур. ${state.end.lvl}!`, 'gain', `✨`);
+        }
+        checkAllAchievements();
+        saveStateToCloud();
+    }
+
+    function buyReward(rewardName, cost) {
+        if (state.gold < cost) {
+            alert("Недостаточно лапок 🐾!");
+            return;
+        }
+        state.gold -= cost;
+        state.spentGold += cost;
+        addLog(`Куплено поощрение "${rewardName}"`, 'loss', `-${cost}🐾`);
+        checkAllAchievements();
+        saveStateToCloud();
+    }
+
+    function addSavings() {
+        state.savings = (state.savings || 0) + 1000;
+        addLog(`Копилка пополнена!`, 'gain', `+1 000 ₽`);
+        checkAllAchievements();
+        saveStateToCloud();
+    }
+
+    function undoAction() {
+        if (undoStack.length === 0) return;
+        state = undoStack.pop();
+        addLog(`Действие отменено ↩`, 'loss', `Назад`);
+        saveStateToCloud(true);
+    }
+</script>
+</body>
+</html>
